@@ -1,0 +1,15 @@
+[Unit]
+Description=Registration agent for PiCon
+After=network.target
+
+[Service]
+Type=simple
+
+# edit the lines below to add or change configuration options
+# see agent-bootstrap.py --help for more options
+ExecStart=/home/hack/picon/picon-agent/agent-bootstrap.py \
+http://199.187.221.170:5000/api/
+
+
+Restart=always
+User=hack
