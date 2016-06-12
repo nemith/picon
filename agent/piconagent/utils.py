@@ -1,13 +1,9 @@
-#http://stackoverflow.com/questions/21050671/how-to-check-if-device-is-connected-pyserial
-
-
 import requests,sys,os
 import netifaces
 import pprint
 import ipaddress
 import socket
 import json
-#import serial
 import glob
 from pyroute2 import IPRoute
 
