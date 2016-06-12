@@ -1,10 +1,11 @@
 from unittest import TestCase
-import rpi_db
+import picon_db
 import json
 
 
 class TestUpdate_device(TestCase):
     def test_update_device(self):
+        db = picon_db.PiconDB()
         json_str = """
         {
             "hostname": "test-hostname",
@@ -30,8 +31,8 @@ class TestUpdate_device(TestCase):
         }
         """
         dev_data = json.loads(json_str)
-        rpi_db.update_device(dev_data)
-        dev_id = rpi_db.get_devid_by_sn('testsn123')
-        dev_detail = rpi_db.get_device_details()
-        rpi_db.delete_device_by_devid(dev_id)
+        db.update_device(dev_data)
+        dev_id = db.get_devid_by_sn('testsn123')
+        dev_detail = db.get_device_details()
+        db.delete_device_by_devid(dev_id)
         self.assertIsNotNone(dev_id)

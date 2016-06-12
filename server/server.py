@@ -3,10 +3,16 @@ from flask import Flask, request, jsonify, g, render_template
 from werkzeug.exceptions import BadRequest, Unauthorized
 import collections
 import sqlite3
-import rpi_db
-	
+import picon_db
+
 app = Flask(__name__)
 DEADTIME = 60*5
+
+def get_db():
+    db = getattr(g, '_database', None)
+    if db is None:
+        db = g._database = picon_db.PiconDB()
+    return db
 
 @app.route("/")
 def hello():
@@ -14,7 +20,8 @@ def hello():
 
 @app.route("/devices")
 def devices():
-    devices = rpi_db.get_device_details()
+    db = get_db()
+    devices = db.get_device_details()
     for device in devices:
         last_updated = datetime.strptime(device['last_updated'], 
                                          "%Y-%m-%d %H:%M:%S.%f")
@@ -33,13 +40,13 @@ def device(host, port):
 def register():
     data = request.get_json()
     print(data)
-    rpi_db.update_device(data)
+    db.update_device(data)
     return jsonify(status='ok')
 
 
 @app.teardown_appcontext
 def close_connection(exception):
-    rpi_db.close()
+    db.close()
 
 
 if __name__ == "__main__":
