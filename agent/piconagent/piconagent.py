@@ -1,7 +1,7 @@
 from .utils import *
 from time import sleep
 
-class APIClient():
+class PiConAgent():
     def __init__(self,endpoint='http://localhost/api/',headers={'content-type': 'application/json'},holdtime=300,delay=60):
         self.endpoint = endpoint
         self.headers = headers
@@ -24,9 +24,9 @@ class APIClient():
 
 def main():
     # create an agent and register
-    a = APIClient('http://199.187.221.170:5000/api/')
+    a = PiConAgent('http://199.187.221.170:5000/api/')
     a.register()
-    sys.stderr.write(APIClient.jsonbody)
+    sys.stderr.write(PiConAgent.jsonbody)
 
 if __name__ == "__main__":
     main()

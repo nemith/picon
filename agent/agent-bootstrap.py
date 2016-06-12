@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-from agent import APIClient
+from piconagent.piconagent import PiConAgent
 import argparse
 from daemonize import Daemonize
 #import logger
@@ -16,7 +16,7 @@ args = parser.parse_args()
 
 
 def main():
-    a = APIClient.APIClient('http://199.187.221.170:5000/api/',holdtime=HOLDTIME,delay=DELAY)
+    a = PiConAgent('http://199.187.221.170:5000/api/',holdtime=HOLDTIME,delay=DELAY)
     a.run()
 
 
