@@ -14,6 +14,35 @@ import ipaddress
 _conn = sqlite3.connect('./server.db')
 
 
+def is_schema_installed():
+    c = _conn.cursor()
+    c.execute("""
+        select name from sqlite_master where type='table';
+    """)
+    return len(c.fetchall()) > 0
+
+def create_schema():
+    c = _conn.cursor()
+    c.execute("""
+        create table devices (
+            dev_id integer primary key,
+            hostname text,
+            sn text,
+            first_seen datetime,
+            last_updated datetime);
+    """)
+    c.execute("create table serialports (dev_id integer, port_name text);")
+    c.execute("""
+        create table interfaces (
+            dev_id integer,
+            int_name text,
+            state integer,
+            addr text,
+            ip_version integer);
+    """)
+    _conn.commit()
+
+
 def update_device(dev_info):
     dev_data = json.loads(dev_info)
     dev_id = get_devid_by_sn(dev_data['sn'])
@@ -165,3 +194,8 @@ def ip_version(addr):
     if type(i) is ipaddress.IPv6Address:
         return 6
     return None
+
+
+if not is_schema_installed():
+    raise Exception("server.db does not have schema configured")
+
