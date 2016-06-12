@@ -1,10 +1,11 @@
 from unittest import TestCase
 import rpi_db
+import json
 
 
 class TestUpdate_device(TestCase):
     def test_update_device(self):
-        json = """
+        json_str = """
         {
             "hostname": "test-hostname",
             "sn": "testsn123",
@@ -28,7 +29,8 @@ class TestUpdate_device(TestCase):
             ]
         }
         """
-        rpi_db.update_device(json)
+        dev_data = json.loads(json_str)
+        rpi_db.update_device(dev_data)
         dev_id = rpi_db.get_devid_by_sn('testsn123')
         dev_detail = rpi_db.get_device_details()
         rpi_db.delete_device_by_devid(dev_id)

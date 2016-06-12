@@ -6,7 +6,6 @@
 
 
 import sqlite3
-import json
 import datetime
 import ipaddress
 
@@ -43,8 +42,7 @@ def create_schema():
     _conn.commit()
 
 
-def update_device(dev_info):
-    dev_data = json.loads(dev_info)
+def update_device(dev_data):
     dev_id = get_devid_by_sn(dev_data['sn'])
     c = _conn.cursor()
     now = datetime.datetime.now()
