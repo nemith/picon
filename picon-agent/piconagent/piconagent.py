@@ -1,5 +1,6 @@
 from .utils import *
 from time import sleep
+import logging
 
 class PiConAgent():
     def __init__(self,endpoint='http://localhost/api/',headers={'content-type': 'application/json'},holdtime=300,interval=60):
