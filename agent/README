@@ -1,4 +1,0 @@
-dependencies (excluding standard library)
-- daemon
-- netifaces
-- pyroute2
