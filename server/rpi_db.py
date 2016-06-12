@@ -212,5 +212,9 @@ def ip_version(addr):
     return None
 
 
+def close():
+    _conn.close()
+
+
 initialize()
 
