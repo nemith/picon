@@ -9,19 +9,29 @@ import socket
 import json
 #import serial
 import glob
-import pyroute2
+from pyroute2 import IPRoute
 
 def getPorts():
   # scan for available ports. return a list of port names with /dev/ stripped off
   ports = glob.glob('/dev/ttyS*') + glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*')
   ports = [ port.replace('/dev/','') for port in ports ]
   return ports
- 
+
+def getInterfaceState(ifname):
+  print(ifname)
+  ip = IPRoute()
+  state = ip.get_links(ip.link_lookup(ifname=ifname))[0].get_attr('IFLA_OPERSTATE')
+  ip.close()
+  if state == "UP":
+    return True
+  return False
 def getInterfaces():
   addrs = {}
   for iface in netifaces.interfaces():
     addrs[iface] = {}
+    addrs[iface]['addrs'] = [] 
     afs = netifaces.ifaddresses(iface)
+    addrs[iface]['state'] = getInterfaceState(iface)
     for af in afs:
       if af == netifaces.AF_LINK:
         continue
@@ -34,7 +44,7 @@ def getInterfaces():
 	# ipaddress greatly simplifies implementing this logic
         if address.is_loopback or address.is_link_local:
           continue
-        addrs[iface].append(str(address))
+        addrs[iface]['addrs'].append(str(address))
   return addrs
 
 def getHostname():
@@ -63,8 +73,9 @@ def main():
   body['interfaces'] = getInterfaces()
   body['ports'] = getPorts()
   headers = {'content-type': 'application/json'}
-  jsonbody = json.dumps(body)
+  jsonbody = json.dumps(body,sort_keys=True,indent=2)
   requests.post('http://199.187.221.170:5000/api/register', data = jsonbody, headers = headers)
+  print(jsonbody)
 if __name__ == "__main__":
   main()
 
