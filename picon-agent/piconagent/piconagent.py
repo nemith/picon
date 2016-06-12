@@ -17,7 +17,7 @@ class PiConAgent():
         body['holdtime'] = self.holdtime
         jsonbody = json.dumps(body,sort_keys=True,indent=2)
         print(self.endpoint+'register')
-        requests.post(self.endpoint+'register', data = jsonbody, headers = self.headers)
+        requests.post(self.endpoint+'register', data = jsonbody, headers = self.headers,timeout=2)
     def run(self):
         while True:
             self.register()
