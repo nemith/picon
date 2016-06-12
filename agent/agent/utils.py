@@ -64,10 +64,8 @@ def getSerial():
     return cpuserial
 
 def main():
-
     # buffer to assemble the POST body
     jsonbody = json.dumps(body,sort_keys=True,indent=2)
-    requests.post('http://199.187.221.170:5000/api/register', data = jsonbody, headers = headers)
     sys.stderr.write(jsonbody)
 if __name__ == "__main__":
     main()
