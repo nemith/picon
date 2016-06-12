@@ -6,6 +6,7 @@ import socket
 import json
 import glob
 from pyroute2 import IPRoute
+import logging
 
 def getPorts():
     # scan for available ports. return a list of port names with /dev/ stripped off
