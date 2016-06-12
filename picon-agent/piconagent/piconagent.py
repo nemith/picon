@@ -2,11 +2,11 @@ from .utils import *
 from time import sleep
 
 class PiConAgent():
-    def __init__(self,endpoint='http://localhost/api/',headers={'content-type': 'application/json'},holdtime=300,delay=60):
+    def __init__(self,endpoint='http://localhost/api/',headers={'content-type': 'application/json'},holdtime=300,interval=60):
         self.endpoint = endpoint
         self.headers = headers
         self.holdtime = holdtime
-        self.delay = delay
+        self.interval = interval
     def register(self):
         body = {}
         body['hostname'] = getHostname()
@@ -20,7 +20,7 @@ class PiConAgent():
     def run(self):
         while True:
             self.register()
-            sleep(self.delay)
+            sleep(self.interval)
 
 def main():
     # create an agent and register
