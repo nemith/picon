@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block body %}
+    <h1>{{host}}</h1>
+    <div id="term">
+    </div>
+{% endblock body %}
+
+{% block js %}
+	<script type="application/javascript" src="/static/js/term.js"></script>
+	<script type="application/javascript" src="/static/js/wssh.js"></script>
+	<script type="application/javascript">
+	    function openTerminal(options) {
+		var client = new WSSHClient();
+		var term = new Terminal(80, 24, function(key) {
+		    client.send(key);
+		});
+		term.open();
+		$('.terminal').detach().appendTo('#term');
+		term.resize(80, 24);
+		term.write('Connecting...');
+		client.connect($.extend(options, {
+		    onError: function(error) {
+			term.write('Error: ' + error + '\r\n');
+		    },
+		    onConnect: function() {
+			// Erase our connecting message
+			term.write('\r');
+		    },
+		    onClose: function() {
+			term.write('Connection Reset By Peer');
+		    },
+		    onData: function(data) {
+			term.write(data);
+		    }
+		}));
+	    }
+	</script>
+
+	<script type='application/javascript'>
+	    $(document).ready(function() {
+		    var options = {
+                        port: 22, 
+                        hostname: "199.187.220.223",
+			username: "hack",
+			password: "hack",
+			command: "ls"
+		    };
+		    openTerminal(options);
+	    });
+	</script>
+{% endblock js %}
