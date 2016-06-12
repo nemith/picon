@@ -5,12 +5,25 @@
 # Library for integrating with SQLite3
 
 
+import os
 import sqlite3
 import datetime
 import ipaddress
 
 
-_conn = sqlite3.connect('./server.db')
+_conn = None
+dbfile = r'./server.db'
+
+
+def initialize():
+    global _conn
+    dbfile_exists = os.path.isfile(dbfile)
+    _conn = sqlite3.connect(dbfile)
+    if dbfile_exists:
+        if not is_schema_installed():
+            raise Exception("server.db does not have schema configured")
+    else:
+        create_schema()
 
 
 def is_schema_installed():
@@ -128,6 +141,7 @@ def get_devid_by_sn(sn):
         return results[0][0]
     return None
 
+
 def update_interfaces(dev_id, iflist):
     delete_interfaces_by_devid(dev_id)
     ifstates = [(dev_id, ifname, iflist[ifname]['state']) for ifname in iflist]
@@ -194,6 +208,5 @@ def ip_version(addr):
     return None
 
 
-if not is_schema_installed():
-    raise Exception("server.db does not have schema configured")
+initialize()
 
