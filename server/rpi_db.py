@@ -200,7 +200,11 @@ def delete_serialports_by_devid(dev_id):
 
 
 def ip_version(addr):
-    i = ipaddress.ip_address(addr)
+    i = None
+    try:
+        i = ipaddress.ip_address(addr)
+    except ipaddress.AddressValueError:
+        return None
     if type(i) is ipaddress.IPv4Address:
         return 4
     if type(i) is ipaddress.IPv6Address:
