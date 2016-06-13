@@ -6,7 +6,7 @@ Console servers from RPis
 
 picon-agent dependencies (excluding python standard library)
 - Python 3+
-- python3: daemonize, netifaces, pyroute2
+- python3: daemonize, netifaces, pyroute2, ipaddress
 
 
 Project contents:

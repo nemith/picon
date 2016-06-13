@@ -62,6 +62,11 @@ def getSerial():
 
 def main():
     # buffer to assemble the POST body
+    body = {}
+    body['hostname'] = getHostname()
+    body['sn'] = getSerial()
+    body['interfaces'] = getInterfaces()
+    body['ports'] = getPorts()
     jsonbody = json.dumps(body,sort_keys=True,indent=2)
     sys.stderr.write(jsonbody)
 if __name__ == "__main__":
