@@ -12,12 +12,22 @@ import ipaddress
 
 
 class PiconDB(object):
+    """
+    Database connectivity object for Picon.  Uses SQLite3 for storage.
+
+    Attributes:
+        dbfile:     Location of the database file
+    """
     def __init__(self):
         self._conn = None
         self.dbfile = r'./server.db'
         self.initialize()
 
     def initialize(self):
+        """
+        Initialize the database connection.  If the database file does not exist, create it and initialize the schema.
+        :return: None
+        """
         dbfile_exists = os.path.isfile(self.dbfile)
         self._conn = sqlite3.connect(self.dbfile)
         if dbfile_exists:
@@ -27,6 +37,10 @@ class PiconDB(object):
             self.create_schema()
 
     def is_schema_installed(self):
+        """
+        Returns true if tables are found in the database file, false if not.
+        :return: None
+        """
         c = self._conn.cursor()
         c.execute("""
             select name from sqlite_master where type='table';
@@ -34,6 +48,10 @@ class PiconDB(object):
         return len(c.fetchall()) > 0
 
     def create_schema(self):
+        """
+        Creates database schema in a blank database.
+        :return: None
+        """
         c = self._conn.cursor()
         c.execute("""
             create table devices (
@@ -55,6 +73,11 @@ class PiconDB(object):
         self._conn.commit()
 
     def update_device(self, dev_data):
+        """
+        Takes registration data transmitted by the Picon device and stores it in the database.
+        :param dev_data: Data dictionary from the device, converted from JSON format
+        :return: None
+        """
         dev_id = self.get_devid_by_sn(dev_data['sn'])
         c = self._conn.cursor()
         now = datetime.datetime.now()
@@ -83,6 +106,11 @@ class PiconDB(object):
         self.update_serialports(dev_id, dev_data['ports'])
 
     def get_interface_details(self, dev_id):
+        """
+        Get interface details for a particular device.
+        :param dev_id: dev_id of the device
+        :return: dict() containing items keyed by interface name
+        """
         c = self._conn.cursor()
         c.execute("select int_name, state, addr, ip_version from interfaces where dev_id=?", [dev_id])
         results = c.fetchall()
@@ -97,12 +125,22 @@ class PiconDB(object):
         return if_list
 
     def get_serialport_details(self, dev_id):
+        """
+        Get available serial port details for a particular device.
+        :param dev_id: dev_id of the device
+        :return: list of serial port device names ("ttyUSB0, ttyUSB1")
+        """
         c = self._conn.cursor()
         c.execute("select port_name from serialports where dev_id=?", [dev_id])
         results = c.fetchall()
         return [r[0] for r in results]
 
     def get_device_details(self, dev_id=None):
+        """
+        Get all available details for a particular device, or from all devices if a device id is not provided.
+        :param dev_id: ID of a particular device, or None to return all devices
+        :return: List of dicts() describing all devices
+        """
         devlist = list()
         c = self._conn.cursor()
         if dev_id is None:
@@ -124,6 +162,11 @@ class PiconDB(object):
         return devlist
 
     def get_devid_by_sn(self, sn):
+        """
+        Obtain a device id given a device serial number.
+        :param sn: string containing the serial number
+        :return: device ID if found, None otherwise
+        """
         c = self._conn.cursor()
         c.execute("""
             select
@@ -137,6 +180,12 @@ class PiconDB(object):
         return None
 
     def update_interfaces(self, dev_id, iflist):
+        """
+        Adds interfaces to the database for a particular device.
+        :param dev_id: Device ID of the unit
+        :param iflist: Data dict() describing the interfaces
+        :return: None
+        """
         self.delete_interfaces_by_devid(dev_id)
         ifstates = [(dev_id, ifname, iflist[ifname]['state']) for ifname in iflist]
         insert_list = list()
@@ -156,6 +205,11 @@ class PiconDB(object):
         self._conn.commit()
 
     def delete_device_by_devid(self, dev_id):
+        """
+        Deletes a device from all tables.
+        :param dev_id: Device id to delete
+        :return: None
+        """
         self.delete_interfaces_by_devid(dev_id)
         self.delete_serialports_by_devid(dev_id)
         c = self._conn.cursor()
@@ -163,6 +217,11 @@ class PiconDB(object):
         self._conn.commit()
 
     def delete_interfaces_by_devid(self, dev_id):
+        """
+        Deletes a device's interfaces from interface table.
+        :param dev_id: Device id to delete
+        :return: None
+        """
         c = self._conn.cursor()
         c.execute("""
         delete from interfaces where dev_id=?;
@@ -170,6 +229,12 @@ class PiconDB(object):
         self._conn.commit()
 
     def update_serialports(self, dev_id, portlist):
+        """
+        Add serial ports to the database.
+        :param dev_id: Device id of the owning device
+        :param portlist: List of str()'s describing the port names
+        :return: None
+        """
         self.delete_serialports_by_devid(dev_id)
         c = self._conn.cursor()
         insert_list = [(dev_id, p) for p in portlist]
@@ -182,6 +247,11 @@ class PiconDB(object):
         self._conn.commit()
 
     def delete_serialports_by_devid(self, dev_id):
+        """
+        Deletes a device's serial ports from serialports table.
+        :param dev_id: Device id to delete
+        :return: None
+        """
         c = self._conn.cursor()
         c.execute("""
         delete from serialports where dev_id=?;
@@ -190,6 +260,11 @@ class PiconDB(object):
 
     @staticmethod
     def ip_version(addr):
+        """
+        Given an IPvX address, solves for X
+        :param addr: IP address as str()
+        :return: 4 if IPv4, 6 if IPv6
+        """
         i = None
         try:
             i = ipaddress.ip_address(addr)
@@ -202,5 +277,9 @@ class PiconDB(object):
         return None
 
     def close(self):
+        """
+        Close database file
+        :return: None
+        """
         self._conn.close()
 
