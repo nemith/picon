@@ -3,7 +3,7 @@ from flask import Flask, request, jsonify, g, render_template
 from werkzeug.exceptions import BadRequest, Unauthorized
 import collections
 import sqlite3
-from .db import DB
+from db import DB
 
 
 app = Flask(__name__)
