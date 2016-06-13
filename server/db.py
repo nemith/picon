@@ -1,17 +1,10 @@
-#!/usr/bin/python
-#
-# picon_db.py
-#
-# Library for integrating with SQLite3
-
-
 import os
 import sqlite3
 import datetime
 import ipaddress
 
 
-class PiconDB(object):
+class DB:
     """
     Database connectivity object for Picon.  Uses SQLite3 for storage.
 
@@ -25,7 +18,8 @@ class PiconDB(object):
 
     def initialize(self):
         """
-        Initialize the database connection.  If the database file does not exist, create it and initialize the schema.
+        Initialize the database connection.  If the database file does not
+        exist, create it and initialize the schema.
         :return: None
         """
         dbfile_exists = os.path.isfile(self.dbfile)
@@ -59,7 +53,8 @@ class PiconDB(object):
                 hostname text,
                 sn text,
                 first_seen datetime,
-                last_updated datetime);
+                last_updated datetime,
+                holdtime int);
         """)
         c.execute("create table serialports (dev_id integer, port_name text);")
         c.execute("""
@@ -74,21 +69,25 @@ class PiconDB(object):
 
     def update_device(self, dev_data):
         """
-        Takes registration data transmitted by the Picon device and stores it in the database.
-        :param dev_data: Data dictionary from the device, converted from JSON format
+        Takes registration data transmitted by the Picon device and stores it
+        in the database.
+        :param dev_data: Data dictionary from the device, converted from JSON
+            format
         :return: None
         """
         dev_id = self.get_devid_by_sn(dev_data['sn'])
         c = self._conn.cursor()
-        now = datetime.datetime.now()
+        now = datetime.datetime.utcnow()
         if dev_id is not None:
             c.execute("""
             update devices set
                 hostname=?
                 , sn=?
                 , last_updated=?
+                , holtime=?
             where dev_id=?;
-            """, [dev_data['hostname'], dev_data['sn'], now, dev_id])
+            """, [dev_data['hostname'], dev_data['sn'], now,
+                  dev_data['holdtime'], dev_id])
             self._conn.commit()
         else:
             c.execute("""
@@ -97,9 +96,11 @@ class PiconDB(object):
                 , sn
                 , first_seen
                 , last_updated
+                , holdtime
             )
-            values (?, ?, ?, ?);
-            """, [dev_data['hostname'], dev_data['sn'], now, now])
+            values (?, ?, ?, ?, ?);
+            """, [dev_data['hostname'], dev_data['sn'], now, now,
+                  dev_data['holdtime']])
             self._conn.commit()
         dev_id = self.get_devid_by_sn(dev_data['sn'])
         self.update_interfaces(dev_id, dev_data['interfaces'])
@@ -112,7 +113,8 @@ class PiconDB(object):
         :return: dict() containing items keyed by interface name
         """
         c = self._conn.cursor()
-        c.execute("select int_name, state, addr, ip_version from interfaces where dev_id=?", [dev_id])
+        c.execute("""select int_name, state, addr, ip_version from
+                  interfaces where dev_id=?""", [dev_id])
         results = c.fetchall()
         if_list = dict()
         for r in results:
@@ -137,16 +139,19 @@ class PiconDB(object):
 
     def get_device_details(self, dev_id=None):
         """
-        Get all available details for a particular device, or from all devices if a device id is not provided.
+        Get all available details for a particular device, or from all devices
+        if a device id is not provided.
         :param dev_id: ID of a particular device, or None to return all devices
         :return: List of dicts() describing all devices
         """
         devlist = list()
         c = self._conn.cursor()
         if dev_id is None:
-            c.execute('select dev_id, hostname, sn, first_seen, last_updated from devices;')
+            c.execute('select dev_id, hostname, sn, first_seen, last_updated, '
+                      'holdtime from devices;')
         else:
-            c.execute('select dev_id, hostname, sn, first_seen, last_updated from devices where dev_id=?', [dev_id])
+            c.execute('select dev_id, hostname, sn, first_seen, last_updated, '
+                      'holdtime from devices where dev_id=?', [dev_id])
         results = c.fetchall()
         for r in results:
             dev_dict = dict()
@@ -156,6 +161,7 @@ class PiconDB(object):
             dev_dict['sn'] = r[2]
             dev_dict['first_seen'] = r[3]
             dev_dict['last_updated'] = r[4]
+            dev_dict['holdtime'] = r[5]
             dev_dict['interfaces'] = self.get_interface_details(dev_id)
             dev_dict['ports'] = self.get_serialport_details(dev_id)
             devlist.append(dev_dict)
@@ -187,10 +193,13 @@ class PiconDB(object):
         :return: None
         """
         self.delete_interfaces_by_devid(dev_id)
-        ifstates = [(dev_id, ifname, iflist[ifname]['state']) for ifname in iflist]
+        ifstates = [(dev_id, ifname, iflist[ifname]['state'])
+                    for ifname in iflist]
         insert_list = list()
         for i in ifstates:
-            insert_list.extend([(i[0], i[1], i[2], addr, PiconDB.ip_version(addr)) for addr in iflist[i[1]]['addrs']])
+            insert_list.extend([(i[0], i[1], i[2], addr,
+                                 PiconDB.ip_version(addr))
+                                for addr in iflist[i[1]]['addrs']])
         c = self._conn.cursor()
         c.executemany("""
         insert into interfaces (

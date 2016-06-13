@@ -1,11 +1,11 @@
 from unittest import TestCase
-import picon_db
+from .. import DB
 import json
 
 
 class TestUpdate_device(TestCase):
     def test_update_device(self):
-        db = picon_db.PiconDB()
+        db = DB()
         json_str = """
         {
             "hostname": "test-hostname",

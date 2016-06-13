@@ -1,5 +1,5 @@
 from unittest import TestCase
-import picon_db
+from ..db import DB
 import os
 
 test_file = r'./blank.db'
@@ -7,7 +7,7 @@ original_file = None
 
 class TestInitialize(TestCase):
     def test_initialize(self):
-        db = picon_db.PiconDB()
+        db = DB()
         global original_file
         self.addCleanup(self.shutdown, db)
         self.delete_test_file()
