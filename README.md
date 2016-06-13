@@ -12,9 +12,9 @@ picon-agent dependencies (excluding python standard library)
 Project contents:
 picon/: Project top-level 
 
-picon/picon-server/: Python3 Flash application for the PiCon registry
+picon/server/: Python3 Flask application for the PiCon registry
 
-picon/picon-agent/: Python3 registry agent
-picon/picon-agent/examples/: Configuration and other example files
+picon/agent/: Python3 registry agent
+picon/agent/examples/: Configuration and other example files
 
 

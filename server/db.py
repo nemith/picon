@@ -84,7 +84,7 @@ class DB:
                 hostname=?
                 , sn=?
                 , last_updated=?
-                , holtime=?
+                , holdtime=?
             where dev_id=?;
             """, [dev_data['hostname'], dev_data['sn'], now,
                   dev_data['holdtime'], dev_id])
@@ -198,7 +198,7 @@ class DB:
         insert_list = list()
         for i in ifstates:
             insert_list.extend([(i[0], i[1], i[2], addr,
-                                 PiconDB.ip_version(addr))
+                                 self.ip_version(addr))
                                 for addr in iflist[i[1]]['addrs']])
         c = self._conn.cursor()
         c.executemany("""
