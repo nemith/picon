@@ -6,7 +6,7 @@ import math
 import asyncio, asyncssh, sys
 
 class PiConAgent():
-    def __init__(self,endpoint='http://localhost/api/',headers={'content-type': 'application/json'},holdtime=300,interval=60,tunnel=False):
+    def __init__(self,endpoint='http://localhost/api/',headers={'content-type': 'application/json'},holdtime=300,interval=60,tunnel=False,tunnelserver=None):
         # requests is too noisy for INFO
         logging.basicConfig(level=logging.INFO)
         logging.getLogger('requests').setLevel(logging.WARN)
@@ -15,6 +15,7 @@ class PiConAgent():
         self.holdtime = holdtime
         self.interval = interval
         self.tunnel = tunnel
+        self.tunnelserver = tunnelserver
     def register(self):
         body = {}
         body['hostname'] = getHostname()
@@ -47,7 +48,7 @@ class PiConAgent():
 
     @asyncio.coroutine
     def runAsyncSSHClient(self):
-        with (yield from asyncssh.connect('199.187.219.251')) as conn:
+        with (yield from asyncssh.connect(self.tunnelserver)) as conn:
             listener = yield from conn.forward_remote_port('', 2222, 'localhost', 22)
             yield from listener.wait_closed()
 
