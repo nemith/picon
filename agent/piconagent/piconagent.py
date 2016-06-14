@@ -3,9 +3,10 @@ from .utils import *
 from time import sleep
 import logging
 import math
+import asyncio, asyncssh, sys
 
 class PiConAgent():
-    def __init__(self,endpoint='http://localhost/api/',headers={'content-type': 'application/json'},holdtime=300,interval=60):
+    def __init__(self,endpoint='http://localhost/api/',headers={'content-type': 'application/json'},holdtime=300,interval=60,tunnel=False):
         # requests is too noisy for INFO
         logging.basicConfig(level=logging.INFO)
         logging.getLogger('requests').setLevel(logging.WARN)
@@ -13,6 +14,7 @@ class PiConAgent():
         self.headers = headers
         self.holdtime = holdtime
         self.interval = interval
+        self.tunnel = tunnel
     def register(self):
         body = {}
         body['hostname'] = getHostname()
@@ -39,7 +41,23 @@ class PiConAgent():
     def run(self):
         while True:
             self.register()
+            if self.tunnel:
+                self.openSSHChannel()
             sleep(self.interval)
+
+    @asyncio.coroutine
+    def runAsyncSSHClient(self):
+        with (yield from asyncssh.connect('199.187.219.251')) as conn:
+            listener = yield from conn.forward_remote_port('', 2222, 'localhost', 22)
+            yield from listener.wait_closed()
+
+        yield from conn.wait_closed()
+
+    def openSSHChannel(self):
+        try:
+            asyncio.get_event_loop().run_until_complete(self.runAsyncSSHClient())
+        except (OSError, asyncssh.Error) as exc:
+            sys.exit('SSH connection failed: ' + str(exc))
 
 def main():
     # create an agent and register
