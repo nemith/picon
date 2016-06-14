@@ -2,6 +2,7 @@ import traceback
 from .utils import *
 from time import sleep
 import logging
+import math
 
 class PiConAgent():
     def __init__(self,endpoint='http://localhost/api/',headers={'content-type': 'application/json'},holdtime=300,interval=60):
@@ -16,7 +17,12 @@ class PiConAgent():
         body = {}
         body['hostname'] = getHostname()
         body['sn'] = getSerial()
-        body['interfaces'] = getInterfaces()
+        try:
+            body['interfaces'] = getInterfaces()
+        except Exception as e:
+            logging.error('Skipping this registration attempt because:  ' + str(e))
+            logging.error("%d failed attempts in a row will result in the server declaring us dead (holdtime: %d, registration interval: %d)" % (math.ceil(self.holdtime/self.interval),self.holdtime,self.interval))
+            return False
         body['ports'] = getPorts()
         body['holdtime'] = self.holdtime
         jsonbody = json.dumps(body,sort_keys=True,indent=2)
@@ -24,8 +30,11 @@ class PiConAgent():
             requests.post(self.endpoint+'register', data = jsonbody, headers = self.headers,timeout=2)
         except Exception as e:
             logging.error('PiCon registration attempt failed: ' + str(e))
+            return False
         else:
-            logging.debug("Using registration endpoint %s, send JSON %s" % (self.endpoint+'register',jsonbody))
+            logging.info('Successfully registered with endpoint ' + self.endpoint+'register')
+            logging.debug('Sent JSON in POST body:' + "\n" +  jsonbody)
+            return True
 
     def run(self):
         while True:

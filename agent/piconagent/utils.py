@@ -1,6 +1,5 @@
 import requests,sys,os
 import netifaces
-import pprint
 import ipaddress
 import socket
 import json
@@ -15,11 +14,15 @@ def getPorts():
     return ports
 
 def getInterfaceState(ifname):
-    ip = IPRoute()
-    state = ip.get_links(ip.link_lookup(ifname=ifname))[0].get_attr('IFLA_OPERSTATE')
-    ip.close()
-    if state == "UP":
-        return True
+    try:
+        ip = IPRoute()
+        state = ip.get_links(ip.link_lookup(ifname=ifname))[0].get_attr('IFLA_OPERSTATE')
+        ip.close()
+    except Exception as e:
+        raise Exception("getInterfaceState: Collecting interface status for %s failed: %s" % (ifname,str(e)))
+    else:
+        if state == "UP":
+            return True
     return False
 def getInterfaces():
     addrs = {}
