@@ -15,6 +15,7 @@ picon/: Project top-level
 picon/server/: Python3 Flask application for the PiCon registry
 
 picon/agent/: Python3 registry agent
+
 picon/agent/examples/: Configuration and other example files
 
 
