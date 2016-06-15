@@ -51,8 +51,8 @@ def register():
     db = get_db()
     data = request.get_json()
     print(data)
-    db.update_device(data)
-    return jsonify(status='ok')
+    response = db.update_device(data)
+    return jsonify(response)
 
 
 @app.teardown_appcontext
