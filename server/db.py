@@ -305,6 +305,8 @@ class DB:
         port = get_listener_port_by_devid(dev_id)
         if port is not None:
             return port
+        c = self._conn.cursor()
+        c.execute("BEGIN EXCLUSIVE TRANSACTION;")   # locks database while we are looking for a port
         used_ports = set()
         used_ports |= get_listener_ports_from_db();
         used_ports |= get_listener_ports_from_netstat();
@@ -312,9 +314,10 @@ class DB:
         while i not in used_ports() and i < 65536:
             i += 1
             if i == 65536:
+                # TODO: need to test if this really works to unlock db
+                self._conn.commit()
                 return None
         now = datetime.datetime.utcnow()
-        c = self._conn.cursor()
         c.execute("""
         insert into listener_ports (
             port_num
