@@ -1,9 +1,10 @@
 import traceback
-from .utils import *
+import piconagent.sshchannelthread as sshchannelthread
+import piconagent.utils as utils
 from time import sleep
 import logging
 import math
-import asyncio, asyncssh, sys
+import json,requests
 
 class PiConAgent():
     def __init__(self,endpoint='http://localhost/api/',headers={'content-type': 'application/json'},holdtime=300,interval=60,tunnel=False,tunnelserver=None):
@@ -16,17 +17,18 @@ class PiConAgent():
         self.interval = interval
         self.tunnel = tunnel
         self.tunnelserver = tunnelserver
+        self.sshChannelThread = None
     def register(self):
         body = {}
-        body['hostname'] = getHostname()
-        body['sn'] = getSerial()
+        body['hostname'] = utils.getHostname()
+        body['sn'] = utils.getSerial()
         try:
-            body['interfaces'] = getInterfaces()
+            body['interfaces'] = utils.getInterfaces()
         except Exception as e:
             logging.error('Skipping this registration attempt because:  ' + str(e))
             logging.error("%d failed attempts in a row will result in the server declaring us dead (holdtime: %d, registration interval: %d)" % (math.ceil(self.holdtime/self.interval),self.holdtime,self.interval))
             return False
-        body['ports'] = getPorts()
+        body['ports'] = utils.getPorts()
         body['holdtime'] = self.holdtime
         jsonbody = json.dumps(body,sort_keys=True,indent=2)
         try:
@@ -42,24 +44,15 @@ class PiConAgent():
     def run(self):
         while True:
             self.register()
-            if self.tunnel:
-                self.openSSHChannel()
+            if (not self.sshChannelThread or not self.sshChannelThread.is_alive()) and self.tunnel:
+                if self.sshChannelThread is None:
+                    self.sshChannelThread=sshchannelthread.sshChannelThread(tunnelserver=self.tunnelserver,tunnelport=2222)
+                    self.sshChannelThread.start()
+                else:
+                    logging.error("SSH tunnel connection closed unexpectedly, restarting...")
+                    self.sshChannelThread=sshchannelthread.sshChannelThread(tunnelserver=self.tunnelserver,tunnelport=2222)
+                    self.sshChannelThread.start()
             sleep(self.interval)
-
-    @asyncio.coroutine
-    def runAsyncSSHClient(self):
-        with (yield from asyncssh.connect(self.tunnelserver)) as conn:
-            listener = yield from conn.forward_remote_port('', 2222, 'localhost', 22)
-#            yield from listener.wait_closed()
-
-        yield from conn.wait_closed()
-
-#    @asyncio.coroutine
-    def openSSHChannel(self):
-        try:
-            asyncio.get_event_loop().run_until_complete(self.runAsyncSSHClient())
-        except (OSError, asyncssh.Error) as exc:
-            sys.exit('SSH connection failed: ' + str(exc))
 
 def main():
     # create an agent and register
