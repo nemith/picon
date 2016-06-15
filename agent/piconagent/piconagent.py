@@ -50,10 +50,11 @@ class PiConAgent():
     def runAsyncSSHClient(self):
         with (yield from asyncssh.connect(self.tunnelserver)) as conn:
             listener = yield from conn.forward_remote_port('', 2222, 'localhost', 22)
-            yield from listener.wait_closed()
+#            yield from listener.wait_closed()
 
         yield from conn.wait_closed()
 
+#    @asyncio.coroutine
     def openSSHChannel(self):
         try:
             asyncio.get_event_loop().run_until_complete(self.runAsyncSSHClient())
