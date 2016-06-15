@@ -1,9 +1,16 @@
 - remove or document ability to override tunnel port and server
 - handle no known_hosts entry
 - Add comments
+- Add config for ssh username
+- Add config for ssh key to use
+- Plaintext password location (maybe)
+- Add comments and docstrings
 - Add more logging
-- Improve asyncSSH utilization
 - Allow configurable glob for device filenames
 - send public key with register message
 - generate keypair if it doesn't work
 - blacklist vid/pid?
+
+
+Done
+- Improve asyncSSH utilization; done, moved to sshChannelThread wrapper
