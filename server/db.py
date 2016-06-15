@@ -54,7 +54,8 @@ class DB:
                 sn text,
                 first_seen datetime,
                 last_updated datetime,
-                holdtime int);
+                holdtime int,
+                tunnelport int UNIQUE);
         """)
         c.execute("create table serialports (dev_id integer, port_name text);")
         c.execute("""
@@ -105,6 +106,49 @@ class DB:
         dev_id = self.get_devid_by_sn(dev_data['sn'])
         self.update_interfaces(dev_id, dev_data['interfaces'])
         self.update_serialports(dev_id, dev_data['ports'])
+    def	allocate_tunnelport(dev_id, highport,lowport):
+        """
+        Assigns a new TCP tunnel port to the specified existing device.
+        :param dev_id: ID of target device
+        :return: None
+        """
+        c = self._conn.cursor()
+        now = datetime.datetime.utcnow()
+        if dev_id is not None:
+            c.execute("""
+                UPDATE devices set tunnelport=(
+                    WITH RECURSIVE
+                    cnt(tunnelport) AS (
+                    SELECT 2220
+                    UNION ALL
+                SELECT tunnelport+1 FROM cnt
+                LIMIT 200
+          ) SELECT tunnelport  
+            FROM cnt 
+            WHERE tunnelport
+            NOT IN (SELECT
+                tunnelport
+                FROM devices
+                WHERE tunnelport IS NOT NULL ) 
+                LIMIT 1 )
+                WHERE dev_id=6
+            """, [dev_data['hostname'], dev_data['sn'], now,
+                  dev_data['holdtime'], dev_id])
+            self._conn.commit()
+        else:
+            c.execute("""
+            insert into devices (
+                hostname
+                , sn
+                , first_seen
+                , last_updated
+                , holdtime
+            )
+            values (?, ?, ?, ?, ?);
+            """, [dev_data['hostname'], dev_data['sn'], now, now,
+                  dev_data['holdtime']])
+            self._conn.commit()
+
 
     def get_interface_details(self, dev_id):
         """
