@@ -366,9 +366,9 @@ class DB:
         else:
             assigned_port = LISTENER_PORT_BASE
         c.execute("""
-        update devices set (
+        update devices set
             tunnelport=?
-        ) WHERE dev_id=?;""", [assigned_port, dev_id])
+        WHERE dev_id=?;""", [assigned_port, dev_id])
         self._conn.commit()
         return {
             "tunnelserver": TUNNEL_SERVER,
@@ -401,9 +401,9 @@ class DB:
         """
         c = self._conn.cursor()
         c.execute("""
-        update devices set (
+        update devices set
             tunnelport=NULL
-        ) WHERE dev_id=?;""", [dev_id])
+        WHERE dev_id=?;""", [dev_id])
         self._conn.commit()
 
     def close(self):
