@@ -2,6 +2,7 @@ import os
 import sqlite3
 import datetime
 import ipaddress
+import sys
 
 
 class DB:
@@ -14,6 +15,7 @@ class DB:
     def __init__(self):
         self._conn = None
         self.dbfile = r'./server.db'
+        self.listener_port_base = 5000
         self.initialize()
 
     def initialize(self):
@@ -64,6 +66,13 @@ class DB:
                 state integer,
                 addr text,
                 ip_version integer);
+        """)
+        c.execute("""
+            create table listener_ports (
+                port_num integer primary key,
+                dev_id integer,
+                first_assigned datetime,
+                last_active datetime);
         """)
         self._conn.commit()
 
@@ -284,6 +293,57 @@ class DB:
         if type(i) is ipaddress.IPv6Address:
             return 6
         return None
+
+    def assign_listener_port(self, dev_id):
+        """
+        Assigns a TCP listening port to a device for a reverse SSH tunnel.
+        Args:
+            dev_id: device requesting a port
+
+        Returns: assigned port number
+        """
+        port = get_listener_port_by_devid(dev_id)
+        if port is not None:
+            return port
+        used_ports = set()
+        used_ports |= get_listener_ports_from_db();
+        used_ports |= get_listener_ports_from_netstat();
+        i = self.listener_port_base
+        while i not in used_ports() and i < 65536:
+            i += 1
+            if i == 65536:
+                return None
+        now = datetime.datetime.utcnow()
+        c = self._conn.cursor()
+        c.execute("""
+        insert into listener_ports (
+            port_num
+            , dev_id
+            , first_assigned
+            , last_active
+        )
+        values (?, ?, ?, ?, ?);
+        """, [i, dev_id, now, now])
+        self._conn.commit()
+        return i
+
+    def get_listener_port_by_devid(self, dev_id):
+        c = self._conn.cursor()
+        c.execute("select port_num from listener_ports where dev_id=?", [dev_id])
+        results = c.fetchall()
+        if len(results) > 0:
+            return results[0][0]
+        return None
+
+    def get_listener_ports_from_db(self):
+        c = self._conn.cursor()
+        c.execute("select port_num from listener_ports")
+        results = c.fetchall()
+        return {r[0] for r in results}
+
+    def get_listener_ports_from_netstat(self):
+        # TODO: implement netstat reader for linux
+        return set()
 
     def close(self):
         """
