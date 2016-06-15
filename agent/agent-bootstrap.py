@@ -3,11 +3,16 @@ from piconagent.piconagent import PiConAgent
 import argparse
 from daemonize import Daemonize
 import logging
+from urllib.parse import urlparse
 
 parser = argparse.ArgumentParser(description = 'Run a PiCon agent')
 parser.add_argument('endpoint',type=str, help='Base URL of the PiCon server API, e.g. http://picon.example.com/api/')
 parser.add_argument('--daemonize',action='store_true',help='Run in background [default: False]')
-parser.add_argument('--tunnel',action='store_true',help='Open a reverse SSH tunnel to the server [default: False]')
+
+# commented out for now because these need new behavior with server-side configuration
+#parser.add_argument('--tunnel',action='store_true',help='Open a reverse SSH tunnel to the server.  Currently equires key identity and correct remote authorized_keys (TODO) [default: False]')
+#parser.add_argument('--tunnelserver',type=str,help='Tunnel Server: hostname or IP address of the desired tunnel server [default: hostname from endpoint URL]',default=None)
+
 parser.add_argument('--holdtime',type=int,help='Hold time: seconds for the server to wait before declaring this device unavailable [default: 300]', default=300)
 parser.add_argument('--interval',type=int,help='Interval: seconds between registrations [default: 60]',default=60)
 parser.add_argument('--pidfile',type=str,help='PID File: PID file location, used only if daemonizing [default: /tmp/picon-agent.pid]',default='/tmp/picon-agent.pid')
@@ -34,9 +39,15 @@ def main():
     logLevel = loggingLevelFromVerboseCount(args.verbose)
     if args.debug:
         logLevel = logging.DEBUG
+
+#   needs to be re-evaluated if this will be used for override of server settings
+#    parsedEndpoint = urlparse(args.endpoint)
+#    if args.tunnelserver is None:
+#        args.tunnelserver = parsedEndpoint.netloc.split(':')[0]
+
     logging.basicConfig(format='%(asctime)s %(levelname)s: %(message)s',level=logLevel,filename=args.logfile)
     logging.info('Starting PiCon Agent...')
-    a = PiConAgent(args.endpoint,holdtime=args.holdtime,interval=args.interval,tunnel=args.tunnel)
+    a = PiConAgent(args.endpoint,holdtime=args.holdtime,interval=args.interval)
     logging.info("Using endpoint %ss, holdtime %ss, reporting interval %s" % (args.endpoint,a.holdtime,a.interval))
     a.run()
 

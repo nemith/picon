@@ -2,6 +2,12 @@ import os
 import sqlite3
 import datetime
 import ipaddress
+import sys
+
+
+LISTENER_PORT_BASE = 10000
+DBFILE = r'./server.db'
+TUNNEL_SERVER = 'hack003.netengcode.com'
 
 
 class DB:
@@ -13,7 +19,8 @@ class DB:
     """
     def __init__(self):
         self._conn = None
-        self.dbfile = r'./server.db'
+        self.dbfile = DBFILE
+        self.listener_port_base = LISTENER_PORT_BASE
         self.initialize()
 
     def initialize(self):
@@ -54,7 +61,8 @@ class DB:
                 sn text,
                 first_seen datetime,
                 last_updated datetime,
-                holdtime int);
+                holdtime int,
+                tunnelport int UNIQUE);
         """)
         c.execute("create table serialports (dev_id integer, port_name text);")
         c.execute("""
@@ -73,7 +81,7 @@ class DB:
         in the database.
         :param dev_data: Data dictionary from the device, converted from JSON
             format
-        :return: None
+        :return: Returns tunnel port info as assigned by assign_tunnelport()
         """
         dev_id = self.get_devid_by_sn(dev_data['sn'])
         c = self._conn.cursor()
@@ -105,6 +113,55 @@ class DB:
         dev_id = self.get_devid_by_sn(dev_data['sn'])
         self.update_interfaces(dev_id, dev_data['interfaces'])
         self.update_serialports(dev_id, dev_data['ports'])
+        tunnel = self.assign_tunnelport(dev_id)
+        resp = {
+            "status": "ok",
+            "tunnel": tunnel
+        }
+        return resp
+
+    #def	allocate_tunnelport(dev_id, highport,lowport):
+    #    """
+    #    Assigns a new TCP tunnel port to the specified existing device.
+    #    :param dev_id: ID of target device
+    #    :return: None
+    #    """
+    #    c = self._conn.cursor()
+    #    now = datetime.datetime.utcnow()
+    #    if dev_id is not None:
+    #        c.execute("""
+    #            UPDATE devices set tunnelport=(
+    #                WITH RECURSIVE
+    #                cnt(tunnelport) AS (
+    #                SELECT 2220
+    #                UNION ALL
+    #            SELECT tunnelport+1 FROM cnt
+    #            LIMIT 200
+    #      ) SELECT tunnelport
+    #        FROM cnt
+    #        WHERE tunnelport
+    #        NOT IN (SELECT
+    #            tunnelport
+    #            FROM devices
+    #            WHERE tunnelport IS NOT NULL )
+    #            LIMIT 1 )
+    #            WHERE dev_id=6
+    #        """, [dev_data['hostname'], dev_data['sn'], now,
+    #              dev_data['holdtime'], dev_id])
+    #        self._conn.commit()
+    #    else:
+    #        c.execute("""
+    #        insert into devices (
+    #            hostname
+    #            , sn
+    #            , first_seen
+    #            , last_updated
+    #            , holdtime
+    #        )
+    #        values (?, ?, ?, ?, ?);
+    #        """, [dev_data['hostname'], dev_data['sn'], now, now,
+    #              dev_data['holdtime']])
+    #        self._conn.commit()
 
     def get_interface_details(self, dev_id):
         """
@@ -221,6 +278,7 @@ class DB:
         """
         self.delete_interfaces_by_devid(dev_id)
         self.delete_serialports_by_devid(dev_id)
+        self.delete_listener_port_by_devid(dev_id)
         c = self._conn.cursor()
         c.execute("delete from devices where dev_id=?;", [dev_id])
         self._conn.commit()
@@ -284,6 +342,86 @@ class DB:
         if type(i) is ipaddress.IPv6Address:
             return 6
         return None
+
+    def assign_tunnelport(self, dev_id):
+        """
+        Assigns a TCP listening port to a device for a reverse SSH tunnel.
+        Args:
+            dev_id: device requesting a port
+
+        Returns: assigned port number
+        """
+        current_port = self.get_tunnelport_by_devid(dev_id)
+        if current_port is not None:
+            return {
+                "tunnelserver": TUNNEL_SERVER,
+                "tunnelport": current_port
+            }
+        c = self._conn.cursor()
+        c.execute("BEGIN EXCLUSIVE TRANSACTION;")   # locks database while we are looking for a port
+        assigned_port = 0
+        last_port = self.get_last_tunnelport_from_db(c)
+        if last_port is not None:
+            assigned_port = last_port + 1
+        else:
+            assigned_port = LISTENER_PORT_BASE
+            c.execute("""
+                UPDATE devices set tunnelport=(
+                    WITH RECURSIVE
+                    cnt(tunnelport) AS (
+                    SELECT 2220
+                    UNION ALL
+                SELECT tunnelport+1 FROM cnt
+                LIMIT 200
+          ) SELECT tunnelport
+            FROM cnt
+            WHERE tunnelport
+            NOT IN (SELECT
+                tunnelport
+                FROM devices
+                WHERE tunnelport IS NOT NULL )
+                LIMIT 1 )
+                WHERE dev_id=?;""", [ dev_id ])
+#        c.execute("""
+#        update devices set
+#            tunnelport=?
+#        WHERE dev_id=?;""", [assigned_port, dev_id])
+        self._conn.commit()
+        return {
+            "tunnelserver": TUNNEL_SERVER,
+            "tunnelport": assigned_port
+        }
+
+    def get_tunnelport_by_devid(self, dev_id):
+        c = self._conn.cursor()
+        c.execute("select tunnelport from devices where dev_id=?;", [dev_id])
+        results = c.fetchall()
+        if len(results) > 0:
+            return results[0][0]
+        return None
+
+    def get_last_tunnelport_from_db(self, c=None):
+        if c is None:
+            c = self._conn.cursor()
+        c.execute("select tunnelport from devices order by tunnelport desc limit 1;")
+        results = c.fetchall()
+        if len(results) > 0:
+            return results[0][0]
+        else:
+            return None
+
+    def delete_listener_port_by_devid(self, dev_id):
+        """
+        Removes a device's SSH tunnel port from devices table.
+        :param dev_id: Device id to delete
+        :return: None
+        """
+        c = self._conn.cursor()
+        c.execute("""
+        update devices set
+            tunnelport=NULL
+        WHERE dev_id=?;""", [dev_id])
+        self._conn.commit()
 
     def close(self):
         """
