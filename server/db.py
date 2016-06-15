@@ -5,6 +5,10 @@ import ipaddress
 import sys
 
 
+LISTENER_PORT_BASE = 10000
+DBFILE = r'./server.db'
+
+
 class DB:
     """
     Database connectivity object for Picon.  Uses SQLite3 for storage.
@@ -14,8 +18,8 @@ class DB:
     """
     def __init__(self):
         self._conn = None
-        self.dbfile = r'./server.db'
-        self.listener_port_base = 5000
+        self.dbfile = DBFILE
+        self.listener_port_base = LISTENER_PORT_BASE
         self.initialize()
 
     def initialize(self):
@@ -68,13 +72,6 @@ class DB:
                 addr text,
                 ip_version integer);
         """)
-        c.execute("""
-            create table listener_ports (
-                port_num integer primary key,
-                dev_id integer,
-                first_assigned datetime,
-                last_active datetime);
-        """)
         self._conn.commit()
 
     def update_device(self, dev_data):
@@ -115,6 +112,7 @@ class DB:
         dev_id = self.get_devid_by_sn(dev_data['sn'])
         self.update_interfaces(dev_id, dev_data['interfaces'])
         self.update_serialports(dev_id, dev_data['ports'])
+
     def	allocate_tunnelport(dev_id, highport,lowport):
         """
         Assigns a new TCP tunnel port to the specified existing device.
@@ -157,7 +155,6 @@ class DB:
             """, [dev_data['hostname'], dev_data['sn'], now, now,
                   dev_data['holdtime']])
             self._conn.commit()
-
 
     def get_interface_details(self, dev_id):
         """
@@ -274,6 +271,7 @@ class DB:
         """
         self.delete_interfaces_by_devid(dev_id)
         self.delete_serialports_by_devid(dev_id)
+        self.delete_listener_port_by_devid(dev_id)
         c = self._conn.cursor()
         c.execute("delete from devices where dev_id=?;", [dev_id])
         self._conn.commit()
@@ -338,7 +336,7 @@ class DB:
             return 6
         return None
 
-    def assign_listener_port(self, dev_id):
+    def assign_tunnelport(self, dev_id):
         """
         Assigns a TCP listening port to a device for a reverse SSH tunnel.
         Args:
@@ -346,14 +344,12 @@ class DB:
 
         Returns: assigned port number
         """
-        port = get_listener_port_by_devid(dev_id)
+        port = self.get_tunnelport_by_devid(dev_id)
         if port is not None:
             return port
         c = self._conn.cursor()
         c.execute("BEGIN EXCLUSIVE TRANSACTION;")   # locks database while we are looking for a port
-        used_ports = set()
-        used_ports |= get_listener_ports_from_db();
-        used_ports |= get_listener_ports_from_netstat();
+        used_ports = self.get_tunnelports_from_db();
         i = self.listener_port_base
         while i not in used_ports() and i < 65536:
             i += 1
@@ -363,34 +359,38 @@ class DB:
                 return None
         now = datetime.datetime.utcnow()
         c.execute("""
-        insert into listener_ports (
-            port_num
-            , dev_id
-            , first_assigned
-            , last_active
-        )
-        values (?, ?, ?, ?, ?);
-        """, [i, dev_id, now, now])
+        update devices set (
+            tunnelport=?
+        ) WHERE dev_id=?;""", [i, dev_id])
         self._conn.commit()
         return i
 
-    def get_listener_port_by_devid(self, dev_id):
+    def get_tunnelport_by_devid(self, dev_id):
         c = self._conn.cursor()
-        c.execute("select port_num from listener_ports where dev_id=?", [dev_id])
+        c.execute("select tunnelport from devices where dev_id=?;", [dev_id])
         results = c.fetchall()
         if len(results) > 0:
             return results[0][0]
         return None
 
-    def get_listener_ports_from_db(self):
+    def get_tunnelports_from_db(self):
         c = self._conn.cursor()
-        c.execute("select port_num from listener_ports")
+        c.execute("select tunnelport from devices;")
         results = c.fetchall()
         return {r[0] for r in results}
 
-    def get_listener_ports_from_netstat(self):
-        # TODO: implement netstat reader for linux
-        return set()
+    def delete_listener_port_by_devid(self, dev_id):
+        """
+        Removes a device's SSH tunnel port from devices table.
+        :param dev_id: Device id to delete
+        :return: None
+        """
+        c = self._conn.cursor()
+        c.execute("""
+        update devices set (
+            tunnelport=NULL
+        ) WHERE dev_id=?;""", [dev_id])
+        self._conn.commit()
 
     def close(self):
         """
