@@ -7,6 +7,7 @@ import sys
 
 LISTENER_PORT_BASE = 10000
 DBFILE = r'./server.db'
+TUNNEL_SERVER = 'hack003.netengcode.com'
 
 
 class DB:
@@ -344,26 +345,29 @@ class DB:
 
         Returns: assigned port number
         """
-        port = self.get_tunnelport_by_devid(dev_id)
-        if port is not None:
-            return port
+        current_port = self.get_tunnelport_by_devid(dev_id)
+        if current_port is not None:
+            return {
+                "tunnelserver": TUNNEL_SERVER,
+                "tunnelport": current_port
+            }
         c = self._conn.cursor()
         c.execute("BEGIN EXCLUSIVE TRANSACTION;")   # locks database while we are looking for a port
-        used_ports = self.get_tunnelports_from_db();
-        i = self.listener_port_base
-        while i not in used_ports() and i < 65536:
-            i += 1
-            if i == 65536:
-                # TODO: need to test if this really works to unlock db
-                self._conn.commit()
-                return None
-        now = datetime.datetime.utcnow()
+        assigned_port = 0
+        last_port = self.get_last_tunnelport_from_db(c)
+        if last_port is not None:
+            assigned_port = last_port + 1
+        else:
+            assigned_port = LISTENER_PORT_BASE
         c.execute("""
         update devices set (
             tunnelport=?
-        ) WHERE dev_id=?;""", [i, dev_id])
+        ) WHERE dev_id=?;""", [assigned_port, dev_id])
         self._conn.commit()
-        return i
+        return {
+            "tunnelserver": TUNNEL_SERVER,
+            "tunnelport": assigned_port
+        }
 
     def get_tunnelport_by_devid(self, dev_id):
         c = self._conn.cursor()
@@ -373,11 +377,15 @@ class DB:
             return results[0][0]
         return None
 
-    def get_tunnelports_from_db(self):
-        c = self._conn.cursor()
-        c.execute("select tunnelport from devices;")
+    def get_last_tunnelport_from_db(self, c=None):
+        if c is None:
+            c = self._conn.cursor()
+        c.execute("select tunnelport from devices order by tunnelport desc limit 1;")
         results = c.fetchall()
-        return {r[0] for r in results}
+        if len(results) > 0:
+            return results[0][0]
+        else:
+            return None
 
     def delete_listener_port_by_devid(self, dev_id):
         """
