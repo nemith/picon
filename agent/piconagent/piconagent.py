@@ -7,7 +7,7 @@ import math
 import json,requests
 
 class PiConAgent():
-    def __init__(self,endpoint='http://localhost/api/',headers={'content-type': 'application/json'},holdtime=300,interval=60,tunnel=False,tunnelserver=None):
+    def __init__(self,endpoint='http://localhost/api/',headers={'content-type': 'application/json'},holdtime=300,interval=60,tunnel=False,tunnelserver=None,tunnelport=None):
         # requests is too noisy for INFO
         logging.basicConfig(level=logging.INFO)
         logging.getLogger('requests').setLevel(logging.WARN)
@@ -17,6 +17,7 @@ class PiConAgent():
         self.interval = interval
         self.tunnel = tunnel
         self.tunnelserver = tunnelserver
+        self.tunnelport = tunnelport
         self.sshChannelThread = None
     def register(self):
         body = {}
@@ -32,13 +33,19 @@ class PiConAgent():
         body['holdtime'] = self.holdtime
         jsonbody = json.dumps(body,sort_keys=True,indent=2)
         try:
-            requests.post(self.endpoint+'register', data = jsonbody, headers = self.headers,timeout=2)
+            r = requests.post(self.endpoint+'register', data = jsonbody, headers = self.headers,timeout=2)
         except Exception as e:
             logging.error('PiCon registration attempt failed: ' + str(e))
             return False
         else:
             logging.info('Successfully registered with endpoint ' + self.endpoint+'register')
             logging.debug('Sent JSON in POST body:' + "\n" +  jsonbody)
+            logging.debug('Received JSON in POST response:' + "\n" +  r.text)
+            rjson = r.json()
+            if rjson is not None and 'tunnel' in rjson  and 'server' in rjson['tunnel']:
+                self.tunnelserver=rjson['tunnel']['server']
+            if rjson is not None and 'tunnel' in rjson  and 'port' in rjson['tunnel']:
+                self.tunnelport=rjson['tunnel']['port']
             return True
 
     def run(self):

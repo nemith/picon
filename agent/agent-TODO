@@ -1,4 +1,5 @@
-- take port allocation from register response
+- remove or document ability to override tunnel port and server
+- handle no known_hosts entry
 - Add comments
 - Add more logging
 - Improve asyncSSH utilization
