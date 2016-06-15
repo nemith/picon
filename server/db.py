@@ -365,10 +365,27 @@ class DB:
             assigned_port = last_port + 1
         else:
             assigned_port = LISTENER_PORT_BASE
-        c.execute("""
-        update devices set
-            tunnelport=?
-        WHERE dev_id=?;""", [assigned_port, dev_id])
+            c.execute("""
+                UPDATE devices set tunnelport=(
+                    WITH RECURSIVE
+                    cnt(tunnelport) AS (
+                    SELECT 2220
+                    UNION ALL
+                SELECT tunnelport+1 FROM cnt
+                LIMIT 200
+          ) SELECT tunnelport
+            FROM cnt
+            WHERE tunnelport
+            NOT IN (SELECT
+                tunnelport
+                FROM devices
+                WHERE tunnelport IS NOT NULL )
+                LIMIT 1 )
+                WHERE dev_id=?;""", [ dev_id ])
+#        c.execute("""
+#        update devices set
+#            tunnelport=?
+#        WHERE dev_id=?;""", [assigned_port, dev_id])
         self._conn.commit()
         return {
             "tunnelserver": TUNNEL_SERVER,
