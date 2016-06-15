@@ -7,7 +7,7 @@ import sys
 
 LISTENER_PORT_BASE = 10000
 DBFILE = r'./server.db'
-TUNNEL_SERVER = 'hack003.netengcode.com'
+TUNNEL_SERVER = '2620:0:ce0:101:a00:27ff:feb0:faef'
 
 
 class DB:
@@ -354,8 +354,8 @@ class DB:
         current_port = self.get_tunnelport_by_devid(dev_id)
         if current_port is not None:
             return {
-                "tunnelserver": TUNNEL_SERVER,
-                "tunnelport": current_port
+                "server": TUNNEL_SERVER,
+                "port": current_port
             }
         c = self._conn.cursor()
         c.execute("BEGIN EXCLUSIVE TRANSACTION;")   # locks database while we are looking for a port
