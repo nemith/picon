@@ -51,9 +51,9 @@ class PiConAgent():
     def run(self):
         while True:
             self.register()
-            if (not self.sshChannelThread or not self.sshChannelThread.is_alive()) and self.tunnel:
+            if (not self.sshChannelThread or not self.sshChannelThread.is_alive()) and self.tunnelport and self.tunnelserver:
                 if self.sshChannelThread is None:
-                    self.sshChannelThread=sshchannelthread.sshChannelThread(tunnelserver=self.tunnelserver,tunnelport=2222)
+                    self.sshChannelThread=sshchannelthread.sshChannelThread(tunnelserver=self.tunnelserver,tunnelport=self.tunnelport)
                     self.sshChannelThread.start()
                 else:
                     logging.error("SSH tunnel connection closed unexpectedly, restarting...")

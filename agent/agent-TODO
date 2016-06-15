@@ -1,4 +1,5 @@
 - remove or document ability to override tunnel port and server
+- add detection for changed port number
 - handle no known_hosts entry
 - Add comments
 - Add config for ssh username
