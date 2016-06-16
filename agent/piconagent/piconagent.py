@@ -7,7 +7,7 @@ import math
 import json,requests
 
 class PiConAgent():
-    def __init__(self,endpoint='http://localhost/api/',headers={'content-type': 'application/json'},holdtime=300,interval=60,tunnel=False,tunnelserver=None,tunnelport=None):
+    def __init__(self,endpoint='http://localhost/api/',headers={'content-type': 'application/json'},holdtime=300,interval=60):
         # requests is too noisy for INFO
         logging.basicConfig(level=logging.INFO)
         logging.getLogger('requests').setLevel(logging.WARN)
@@ -15,9 +15,6 @@ class PiConAgent():
         self.headers = headers
         self.holdtime = holdtime
         self.interval = interval
-        self.tunnel = tunnel
-        self.tunnelserver = tunnelserver
-        self.tunnelport = tunnelport
         self.sshChannelThread = None
     def register(self):
         body = {}
@@ -50,16 +47,22 @@ class PiConAgent():
 
     def run(self):
         while True:
-            self.register()
-            if (not self.sshChannelThread or not self.sshChannelThread.is_alive()) and self.tunnelport and self.tunnelserver:
-                if self.sshChannelThread is None:
-                    self.sshChannelThread=sshchannelthread.sshChannelThread(tunnelserver=self.tunnelserver,tunnelport=self.tunnelport)
-                    self.sshChannelThread.start()
-                else:
-                    logging.error("SSH tunnel connection closed unexpectedly, restarting...")
-                    self.sshChannelThread=sshchannelthread.sshChannelThread(tunnelserver=self.tunnelserver,tunnelport=2222)
-                    self.sshChannelThread.start()
+            regStatus = self.register()
+            if regStatus and (not self.sshChannelThread or not self.sshChannelThread.is_alive()) and self.tunnelport and self.tunnelserver:
+                if self.sshChannelThread is None and self.tunnelport and self.tunnelserver:
+                    self.connectSSH()
+                elif regStatus:
+                    logging.error("SSH tunnel connection closed unexpectedly, restarting connection to %s:%d" % (self.tunnelserver,self.tunnelport) )
+                    self.connectSSH(restart=True)
             sleep(self.interval)
+    def connectSSH(self,restart=False):
+        if restart:
+            logging.info("Retarting SSH tunnel connection to %s:%d" % (self.tunnelserver,self.tunnelport) )
+        else:
+            logging.info("Starting SSH tunnel connection to %s:%d" % (self.tunnelserver,self.tunnelport) )
+        self.sshChannelThread=sshchannelthread.sshChannelThread(tunnelserver=self.tunnelserver,tunnelport=self.tunnelport)
+        self.sshChannelThread.start()
+
 
 def main():
     # create an agent and register

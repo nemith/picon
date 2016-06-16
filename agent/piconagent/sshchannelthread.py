@@ -4,7 +4,7 @@ import logging
 class sshChannelThread(threading.Thread):
     def __init__(self,loop=asyncio.new_event_loop(),tunnelserver='localhost',tunnelport=2222):
         self.loop = loop
-        super().__init__()
+        super(sshChannelThread, self).__init__()
         self.tunnelserver=tunnelserver
         self.tunnelport=tunnelport
     def run(self):
@@ -17,8 +17,7 @@ class sshChannelThread(threading.Thread):
     @asyncio.coroutine
     def run_client(self):
         with (yield from asyncssh.connect(self.tunnelserver)) as conn:
+            logging.info("SSH tunnel connection to %s localhost:%d is now open" % (self.tunnelserver,self.tunnelport) )
             listener = yield from conn.forward_remote_port("", self.tunnelport, 'localhost', 22)
             yield from listener.wait_closed()
         yield from conn.wait_closed()
-
-
