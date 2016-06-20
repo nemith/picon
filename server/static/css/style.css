@@ -3,6 +3,10 @@ body {
 }
 
 .body {}
+img.center {                                        
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
 .terminal {
     border: #000 solid 5px;
     font-family: "Monaco", "DejaVu Sans Mono", "Liberation Mono", monospace;
