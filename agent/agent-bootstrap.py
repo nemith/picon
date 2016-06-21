@@ -18,6 +18,10 @@ parser.add_argument('-v',dest='verbose',action='count',help='Verbose Level: Repe
 
 args = parser.parse_args()
 
+# Append '/' to endpoint URL if not already present
+if args.endpoint[-1] != '/':
+    args.endpoint += '/'
+
 def loggingLevelFromVerboseCount(vcount):
     if vcount is None:
         return logging.ERROR
