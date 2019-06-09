@@ -7,7 +7,7 @@ import sys
 
 LISTENER_PORT_BASE = 10000
 DBFILE = r'./server.db'
-TUNNEL_SERVER = '2620:0:ce0:101:a00:27ff:feb0:faef'
+TUNNEL_SERVER = '172.28.10.3'
 
 
 class DB:
@@ -64,7 +64,12 @@ class DB:
                 holdtime int,
                 tunnelport int UNIQUE);
         """)
-        c.execute("create table serialports (dev_id integer, port_name text);")
+        c.execute("""CREATE TABLE "serialports" (
+    `dev_id`    integer,
+    `port_name` text,
+    `port_description`  text,
+    PRIMARY KEY(port_name)
+)""")
         c.execute("""
             create table interfaces (
                 dev_id integer,
@@ -190,9 +195,15 @@ class DB:
         :return: list of serial port device names ("ttyUSB0, ttyUSB1")
         """
         c = self._conn.cursor()
-        c.execute("select port_name from serialports where dev_id=?", [dev_id])
+        c.execute("select port_name, port_description from serialports where dev_id=?", [dev_id])
         results = c.fetchall()
-        return [r[0] for r in results]
+        port_details = []
+        for r in results:
+            new_port = {}
+            new_port['name'] = r[0]
+            new_port['description'] = r[1]
+            port_details.append(new_port)
+        return port_details
 
     def get_device_details(self, dev_id=None):
         """
@@ -205,10 +216,10 @@ class DB:
         c = self._conn.cursor()
         if dev_id is None:
             c.execute('select dev_id, hostname, sn, first_seen, last_updated, '
-                      'holdtime from devices;')
+                      'holdtime, tunnelport from devices;')
         else:
             c.execute('select dev_id, hostname, sn, first_seen, last_updated, '
-                      'holdtime from devices where dev_id=?', [dev_id])
+                      'holdtime, tunnelport from devices where dev_id=?', [dev_id])
         results = c.fetchall()
         for r in results:
             dev_dict = dict()
@@ -221,6 +232,7 @@ class DB:
             dev_dict['holdtime'] = r[5]
             dev_dict['interfaces'] = self.get_interface_details(dev_id)
             dev_dict['ports'] = self.get_serialport_details(dev_id)
+            dev_dict['tunnelport'] = r[6]
             devlist.append(dev_dict)
         return devlist
 
@@ -302,16 +314,32 @@ class DB:
         :param portlist: List of str()'s describing the port names
         :return: None
         """
-        self.delete_serialports_by_devid(dev_id)
+        # Commenting out deletion, so as to not remove persisting "configuration" data in the database
+        # future work - clean up serialports that are not seen after X amount of time
+        # requires schema change to track first/last seen on ports
+        #self.delete_serialports_by_devid(dev_id)
         c = self._conn.cursor()
         insert_list = [(dev_id, p) for p in portlist]
         c.executemany("""
-        insert into serialports (
+        insert OR IGNORE into serialports (
             dev_id
             , port_name
         )
         values (?, ?);""", insert_list)
         self._conn.commit()
+
+    def update_serialport_description(self, dev_id, port_name, port_description):
+        """
+        Update the description field for the port identified by dev_id and port_name
+        :param dev_id: Device id of the owning device
+        :param port_name: Name of the port to update
+        :param port_description: New description for the port
+        """
+        c = self._conn.cursor()
+        c.execute("""
+        update serialports set port_description=? where dev_id=? and port_name=?""", [port_description, dev_id, port_name])
+        self._conn.commit()
+        print("PORT UPDATED")
 
     def delete_serialports_by_devid(self, dev_id):
         """
