@@ -11,6 +11,8 @@
     
       <dt>Last Seen</dt>
       <dd>{{ device['last_updated'] }}</dd>
+      <dt>Tunnel Details</dt>
+      <dd>Port: {{ device['tunnelport'] }}</dd>
     </dl>
     <h2>Network Interfaces</h2>
     <table class="table">
@@ -23,7 +25,21 @@
     <table class="table">
       <tr><th>Port name</th></tr>
       {% for port in device['ports'] %}
-         <tr><td>{{ port }}</td></tr>
+         <tr><td>
+          {{ port['name'] }}
+          <a href="#" class="port_description" data-type="text" data-placement="right" data-url="/device/{{device['dev_id']}}/serialport/{{port['name']}}/description" data-title="Enter port description" data-pk="{{device['dev_id']}}/{{port['name']}}" data-port>{{port['description']}}</a>
+        </td></tr>
       {% endfor %}
     </table>
 {% endblock body %}
+
+{% block js %}
+<script type="text/javascript">
+$(document).ready(function() {
+    $.fn.editable.defaults.mode = 'inline';     
+    
+    //make port descriptions editable
+    $('.port_description').editable();
+});
+</script>
+{% endblock js%}

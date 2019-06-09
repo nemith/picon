@@ -4,6 +4,7 @@ from werkzeug.exceptions import BadRequest, Unauthorized
 import collections
 import sqlite3
 from db import DB
+import pprint
 
 
 app = Flask(__name__)
@@ -45,8 +46,15 @@ def device(dev_id):
     print(device)
     return render_template('device.html', device=device[0])
 
+# update port description via POST from device details page
+@app.route('/device/<int:dev_id>/serialport/<string:port_name>/description', methods=['POST'])
+def device_update_port_description(dev_id, port_name):
+    db = get_db()
+    port_description = request.form['value']
+    db.update_serialport_description(dev_id, port_name, port_description)
+    return ""
 
-@app.route('/api/register',methods=['POST'])
+@app.route('/api/register', methods=['POST'])
 def register():
     db = get_db()
     data = request.get_json()

@@ -19,7 +19,12 @@
         {%for name, intf in device['interfaces'].items() %}
            <dl><dt>{{ name }}</dt><dd>{{ intf['addrs']|join('<br>')|safe }}</dd></dl>
         {% endfor %}</td>
-        <td>{{ device['ports']|join('<br>')|safe}}</td>
+        <td>
+  {% for port in device['ports'] %}
+    <span data-toggle="modal" data-target="#interactiveConsoleModal" data-hostname="{{device['hostname']}}" data-portname="{{port['name']}}">{{ port['name'] }} <i>{{port['description']}}</i></span>
+    <br>
+  {% endfor %}
+</td>
         <td>{{ device['first_seen'] }}</td>
         <td>{{ device['last_updated'] }}</td>
         <td><a data-toggle="tooltip" title="{{ device['seen_ago'] }}"><img src="/static/images/{{ device['status'] }}.png"></a></td>
@@ -27,4 +32,40 @@
 {% endfor %}
 </table>
 
+
 {% endblock body %}
+
+{% block js %}
+
+<!-- Modal used for console access popup-->
+<div class="modal fade" id="interactiveConsoleModal" tabindex="-1" role="dialog" aria-labelledby="interactiveConsoleModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="interactiveConsoleModalLabel">Console for (host)</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        ...
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+        <button type="button" class="btn btn-primary">Save changes</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="text/javascript">
+$("#interactiveConsoleModal").on('show.bs.modal', function (event) {
+  var triggeringSpan = $(event.relatedTarget) 
+  var hostname = triggeringSpan.data('hostname')
+  var portname = triggeringSpan.data('portname')
+  var modal = $(this)
+  modal.find("#interactiveConsoleModalLabel").text("Console for port "+portname+" on host "+hostname)
+});
+</script>
+
+{% endblock js %}

@@ -33,4 +33,15 @@ picon/agent/: Python3 registry agent
 
 picon/agent/examples/: Configuration and other example files
 
+# Assumptions
+- Console devices (RPI/alike) serve no other sensitive purpose
+- Unprivileged user on the console device has pubkey or other passwordless auth to the SSH server (if used)
 
+
+# Contributions Welcome
+To-do:
+- Websockets on server, which can connect to the RPI SSH port (or via SSH server)
+- Websockets client in the UI
+- Configuration files to abstract server behavior, including reasonable defaults and examples
+- Capability for the client to run tests to identify valid console devices and possibly test liveness
+- Basic privilege/authentication model
