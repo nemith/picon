@@ -68,7 +68,8 @@ class DB:
     `dev_id`    integer,
     `port_name` text,
     `port_description`  text,
-    PRIMARY KEY(port_name)
+    `last_updated`  datetime,
+    PRIMARY KEY(dev_id,port_name)
 )""")
         c.execute("""
             create table interfaces (
@@ -319,13 +320,17 @@ class DB:
         # requires schema change to track first/last seen on ports
         #self.delete_serialports_by_devid(dev_id)
         c = self._conn.cursor()
-        insert_list = [(dev_id, p) for p in portlist]
+        now = datetime.datetime.utcnow()
+        insert_list = [(now, dev_id, p) for p in portlist]
         c.executemany("""
         insert OR IGNORE into serialports (
-            dev_id
-            , port_name
+            last_updated,
+            dev_id,
+            port_name
         )
-        values (?, ?);""", insert_list)
+        values (?, ?, ?);""", insert_list)
+        c.executemany("""
+        update serialports set last_updated=? where dev_id=? and port_name=?;""", insert_list)
         self._conn.commit()
 
     def update_serialport_description(self, dev_id, port_name, port_description):
