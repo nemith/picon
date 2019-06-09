@@ -54,6 +54,11 @@ def register():
     response = db.update_device(data)
     return jsonify(response)
 
+@app.route("/api/devices")
+def api_devices():
+    db = get_db()
+    devices = db.get_device_details()
+    return jsonify(devices)
 
 @app.teardown_appcontext
 def close_connection(exception):
@@ -62,5 +67,5 @@ def close_connection(exception):
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", debug=True)
+    app.run(host="::", debug=True)
 
