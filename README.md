@@ -7,19 +7,20 @@ Console servers from RPis, featuring:
 - (pending development) Proxy agent connects to existing console ports and registers with the API, proxying access for seamless use alongside the RPI infrastructure
 ![Devices](doc/img/picon-devices.png)
 
-Potential use cases:
+# Potential use cases
 - Ship to remote locations being built, with a data dongle.  Local contact would only need to unpack, plug in, and power on
+- Ship to remote locations suffering problems, skip talking non-technical colleagues through accessing a console port and fixing your network during a painful phone call
 - Install inside existing networks as an alternative to conventional Cisco, Digi, Avocent console infrastructure. Benefits inc
 - Daemonized agent constantly logs all console output to file or syslog destinations, so that historical console output can be found for device crashes, etc
-- 
-
-
-
-
-picon-agent dependencies (excluding python standard library)
+    
+# picon-agent dependencies
+(excluding python standard library)
 - Python 3+
-- python3: daemonize, netifaces, pyroute2, ipaddress
+- python3: asyncssh, daemonize, netifaces, pyroute2, ipaddress
 
+# picon-server dependencies
+- Python 3+
+- python3: flask, jinja2
 
 Project contents:
 picon/: Project top-level 
